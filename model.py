@@ -82,27 +82,25 @@ def create_generator(input_nc, output_nc, ngf):
 def create_discriminator(input_nc, output_nc, ndf, n_layers):
 	discriminator = Sequential()
 
-	discriminator.add(Conv2D(ndf, (4,4), strides=2, input_shape=(128,128,input_nc+output_nc)))
+	discriminator.add(_Conv2D(ndf, (4,4), strides=2, input_shape=(128,128,input_nc+output_nc)))
 	discriminator.add(LeakyReLU(0.2))
 
 	for i in range(1,n_layers-1):
 		nf_mult = min(2**n,8)
-		model.add(Conv2D(ndf*nf_mult,(4,4),strides=2))
+		model.add(_Conv2D(ndf*nf_mult,(4,4),strides=2))
 		model.add(BatchNormalization())
 		model.add(LeakyReLU(0.2))
 
 	nf_mult = min(2**n_layers, 8)
-	discriminator.add(Conv2D(ndf*nf_mult, (4,4), strides=2))
+	discriminator.add(_Conv2D(ndf*nf_mult, (4,4), strides=2))
 	discriminator.add(BatchNormalization())
-	discriminator.add(Conv2D(1, (4,4), strides=1))
+	discriminator.add(_Conv2D(1, (4,4), strides=1))
 	discriminator.add(Activation('sigmoid'))
 
 	return discriminator
 
+if __name__ == '__main__':
+	print("HEY")
 
-g = create_generator(1,1,4)
-print(g.summary())
-print("-------------------------")
-d = create_discriminator(1,1,4,2)
-print(d.summary())
+
 
