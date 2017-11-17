@@ -4,7 +4,7 @@ from functools import reduce
 
 from keras.models import Sequential,Model
 from keras.layers import Conv2D, MaxPooling2D, Activation, Conv2DTranspose
-from keras.layers import Add, Input
+from keras.layers import Add, Input, Concatenate
 from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 import tensorflow as tf
@@ -34,9 +34,9 @@ def R_DeConv_BN(*args, **kwargs):
 		)
 
 
-def create_generator(input_nc, output_nc, ngf):
+def create_generator(input_nc, output_nc, ngf, img_shape):
 
-	inputs = Input(shape=(128,128,input_nc))
+	inputs = Input(shape=(img_shape))
 
 	#Encoder
 
@@ -78,26 +78,38 @@ def create_generator(input_nc, output_nc, ngf):
 	return model
 
 
+def create_discriminator(input_nc, output_nc, ndf, n_layers, img_shape):
+	model = Sequential()
 
-def create_discriminator(input_nc, output_nc, ndf, n_layers):
-	discriminator = Sequential()
-
-	discriminator.add(_Conv2D(ndf, (4,4), strides=2, input_shape=(128,128,input_nc+output_nc)))
-	discriminator.add(LeakyReLU(0.2))
+	model.add(_Conv2D(ndf, (4,4), strides=2, input_shape=(img_shape[0],img_shape[1],input_nc+output_nc)))
+	model.add(LeakyReLU(0.2))
 
 	for i in range(1,n_layers-1):
-		nf_mult = min(2**n,8)
+		nf_mult = min(2**i,8)
 		model.add(_Conv2D(ndf*nf_mult,(4,4),strides=2))
 		model.add(BatchNormalization())
 		model.add(LeakyReLU(0.2))
 
 	nf_mult = min(2**n_layers, 8)
-	discriminator.add(_Conv2D(ndf*nf_mult, (4,4), strides=2))
-	discriminator.add(BatchNormalization())
-	discriminator.add(_Conv2D(1, (4,4), strides=1))
-	discriminator.add(Activation('sigmoid'))
+	model.add(_Conv2D(ndf*nf_mult, (4,4), strides=2))
+	model.add(BatchNormalization())
+	model.add(_Conv2D(1, (4,4), strides=1))
+	model.add(Activation('sigmoid'))
 
-	return discriminator
+	return model
+
+
+def generator_containing_discriminator(generator, discriminator, img_shape):
+    inputs = Input(img_shape)
+    x_generator = generator(inputs)
+    
+    merged = Concatenate(axis=3)([inputs, x_generator])
+    discriminator.trainable = False
+    x_discriminator = discriminator(merged)
+    
+    model = Model(inputs=inputs, outputs=[x_generator,x_discriminator])
+    
+    return model
 
 if __name__ == '__main__':
 	print("HEY")
