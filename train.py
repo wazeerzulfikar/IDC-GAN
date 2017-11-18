@@ -7,6 +7,7 @@ from keras.optimizers import Adam
 import keras.backend as K
 
 from model import *
+from perc_loss import *
 
 rain_data_path = "/dataset/rain_modified"
 derain_data_path = "/dataset/derain_modified"
@@ -50,11 +51,20 @@ def generator_l1_loss(y_true,y_pred):
     return K.mean(K.abs(K.flatten(y_pred) - K.flatten(y_true)), axis=-1)
 
 
+
+
 generator = create_generator(3, 3, ngf, img_shape)
 print(generator.summary())
 discriminator = create_discriminator(3, 3, ndf, 3, img_shape)
 print(discriminator.summary())
 discriminator_on_generator = generator_containing_discriminator(generator, discriminator, img_shape)
+
+#Perceptual Loss
+def perceptual_loss(y_true, y_pred):
+	return perc_loss(generated_image = y_pred, actual_image = y_true, modelD = discriminator)
+
+lambda1 = 150 #Lambda for perceptual loss
+lambda2 = 150 #Lambda for mse term
 
 
 g_optim = Adam(lr=0.0001,beta_1=0.5)
@@ -81,6 +91,7 @@ for i in range(n_epoch):
 		discriminator.trainable = False
 		d_out = np.ones((batch_size, 32, 32, 1))
 		g_loss = discriminator_on_generator.train_on_batch(batch_x, [batch_y,d_out])
+		
 		discriminator.trainable = True
 
 
