@@ -47,8 +47,8 @@ def discriminator_loss(y_true,y_pred):
 def discriminator_on_generator_loss(y_true,y_pred):
     return K.mean(K.binary_crossentropy(K.flatten(y_pred), K.ones_like(K.flatten(y_pred))), axis=-1)
 
-def generator_l1_loss(y_true,y_pred):
-    return K.mean(K.abs(K.flatten(y_pred) - K.flatten(y_true)), axis=-1)
+def generator_l2_loss(y_true,y_pred):
+    return K.mean(K.square(K.flatten(y_pred) - K.flatten(y_true)), axis=-1)
 
 
 
@@ -72,7 +72,7 @@ d_optim = Adam(lr=0.0001,beta_1=0.5)
 
 discriminator.compile(d_optim, loss=discriminator_loss)
 generator.compile(g_optim, loss='mse')
-discriminator_on_generator.compile(g_optim, loss = [generator_l1_loss, discriminator_on_generator_loss])
+discriminator_on_generator.compile(g_optim, loss = [generator_l2_loss, discriminator_on_generator_loss])
 
 for i in range(n_epoch):
 	print("Epoch : %d"%i)
