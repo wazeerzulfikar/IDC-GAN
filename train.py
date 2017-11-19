@@ -16,6 +16,8 @@ n_epoch = 25
 ngf = 64
 ndf = 48
 batch_size = 7
+lambda1 = 150
+lambda2 = 150
 img_shape = (256,256,3)
 
 
@@ -44,13 +46,16 @@ print("DeRain Data Loaded.")
 def discriminator_loss(y_true,y_pred):
     return K.mean(K.binary_crossentropy(K.flatten(y_pred), K.concatenate([K.ones_like(K.flatten(y_pred[:batch_size,:,:,:])),K.zeros_like(K.flatten(y_pred[:batch_size,:,:,:])) ]) ), axis=-1)
 
-def discriminator_on_generator_loss(y_true,y_pred):
-    return K.mean(K.binary_crossentropy(K.flatten(y_pred), K.ones_like(K.flatten(y_pred))), axis=-1)
-
 def generator_l2_loss(y_true,y_pred):
     return K.mean(K.square(K.flatten(y_pred) - K.flatten(y_true)), axis=-1)
 
+#Perceptual Loss
+def perceptual_loss(y_true, y_pred):
+	return perc_loss(generated_image = y_pred, actual_image = y_true, modelD = discriminator)
 
+
+def refined_perceptual_loss(y_true, y_pred):
+	return discriminator_loss(y_true, y_pred)+lambda1*perceptual_loss(y_true,y_pred)+lambda2*generator_l2_loss(y_true, y_pred)
 
 
 generator = create_generator(3, 3, ngf, img_shape)
@@ -59,20 +64,12 @@ discriminator = create_discriminator(3, 3, ndf, 3, img_shape)
 print(discriminator.summary())
 discriminator_on_generator = generator_containing_discriminator(generator, discriminator, img_shape)
 
-#Perceptual Loss
-def perceptual_loss(y_true, y_pred):
-	return perc_loss(generated_image = y_pred, actual_image = y_true, modelD = discriminator)
-
-lambda1 = 150 #Lambda for perceptual loss
-lambda2 = 150 #Lambda for mse term
-
-
 g_optim = Adam(lr=0.0001,beta_1=0.5)
 d_optim = Adam(lr=0.0001,beta_1=0.5)
 
 discriminator.compile(d_optim, loss=discriminator_loss)
 generator.compile(g_optim, loss='mse')
-discriminator_on_generator.compile(g_optim, loss = [generator_l2_loss, discriminator_on_generator_loss])
+discriminator_on_generator.compile(g_optim, loss = [generator_l2_loss, refined_perceptual_loss])
 
 for i in range(n_epoch):
 	print("Epoch : %d"%i)

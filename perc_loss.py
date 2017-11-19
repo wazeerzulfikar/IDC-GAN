@@ -11,4 +11,4 @@ def perc_loss(generated_image, actual_image, modelD):
 	actual_features = layer_output([actual_image])[0]
 
 	loss = ((generated_features - actualfeatures)**2)/2
-return loss
+	return loss
