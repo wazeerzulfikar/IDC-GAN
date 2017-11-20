@@ -7,10 +7,10 @@ from keras.optimizers import Adam
 import keras.backend as K
 
 from model import *
-from perc_loss import *
+from losses import *
 
-rain_data_path = "/dataset/rain_modified"
-derain_data_path = "/dataset/derain_modified"
+rain_data_path = "./dataset/rain_modified"
+derain_data_path = "./dataset/derain_modified"
 
 n_epoch = 25
 ngf = 64
@@ -41,35 +41,19 @@ print("Rain Data Loaded.")
 derain_data = load_images(derain_data_path)
 print("DeRain Data Loaded.")
 
-####LOSS FUNCTIONS####
-
-def discriminator_loss(y_true,y_pred):
-    return K.mean(K.binary_crossentropy(K.flatten(y_pred), K.concatenate([K.ones_like(K.flatten(y_pred[:batch_size,:,:,:])),K.zeros_like(K.flatten(y_pred[:batch_size,:,:,:])) ]) ), axis=-1)
-
-def generator_l2_loss(y_true,y_pred):
-    return K.mean(K.square(K.flatten(y_pred) - K.flatten(y_true)), axis=-1)
-
-#Perceptual Loss
-def perceptual_loss(y_true, y_pred):
-	return perc_loss(generated_image = y_pred, actual_image = y_true, modelD = discriminator)
-
-
-def refined_perceptual_loss(y_true, y_pred):
-	return discriminator_loss(y_true, y_pred)+lambda1*perceptual_loss(y_true,y_pred)+lambda2*generator_l2_loss(y_true, y_pred)
-
 
 generator = create_generator(3, 3, ngf, img_shape)
 print(generator.summary())
 discriminator = create_discriminator(3, 3, ndf, 3, img_shape)
 print(discriminator.summary())
-discriminator_on_generator = generator_containing_discriminator(generator, discriminator, img_shape)
+discriminator_on_generator, x_generator, x_discriminator = generator_containing_discriminator(generator, discriminator, img_shape)
 
 g_optim = Adam(lr=0.0001,beta_1=0.5)
 d_optim = Adam(lr=0.0001,beta_1=0.5)
 
 discriminator.compile(d_optim, loss=discriminator_loss)
 generator.compile(g_optim, loss='mse')
-discriminator_on_generator.compile(g_optim, loss = [generator_l2_loss, refined_perceptual_loss])
+discriminator_on_generator.compile(g_optim, loss = [refined_loss(d_out=x_discriminator),lambda x,y: 1])
 
 for i in range(n_epoch):
 	print("Epoch : %d"%i)
@@ -82,7 +66,7 @@ for i in range(n_epoch):
 		fake_pairs = np.concatenate((batch_x, generated_images), axis=3)
 
 		x = np.concatenate((real_pairs, fake_pairs))
-		y = np.zeros((2*batch_size, 32, 32, 1))
+		y = np.concatenate((np.ones((batch_size, 32, 32, 1)),np.zeros((batch_size, 32, 32, 1))))
 		d_loss = discriminator.train_on_batch(x, y)
 
 		discriminator.trainable = False

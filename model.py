@@ -109,7 +109,7 @@ def generator_containing_discriminator(generator, discriminator, img_shape):
     
     model = Model(inputs=inputs, outputs=[x_generator,x_discriminator])
     
-    return model
+    return model, x_generator, x_discriminator
 
 if __name__ == '__main__':
 	print("HEY")
