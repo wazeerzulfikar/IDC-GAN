@@ -9,8 +9,8 @@ import keras.backend as K
 from model import *
 from losses import *
 
-rain_data_path = "./dataset/rain_modified"
-derain_data_path = "./dataset/derain_modified"
+rain_data_path = "dataset/rain_modified"
+derain_data_path = "dataset/derain_modified"
 
 n_epoch = 25
 ngf = 64
@@ -53,7 +53,7 @@ d_optim = Adam(lr=0.0001,beta_1=0.5)
 
 discriminator.compile(d_optim, loss=discriminator_loss)
 generator.compile(g_optim, loss='mse')
-discriminator_on_generator.compile(g_optim, loss = [refined_loss(d_out=x_discriminator),lambda x,y: 1])
+discriminator_on_generator.compile(g_optim, loss = [refined_loss(d_out=x_discriminator),perc_loss])
 
 for i in range(n_epoch):
 	print("Epoch : %d"%i)
@@ -61,14 +61,21 @@ for i in range(n_epoch):
 		batch_x = rain_data[batch_idx:batch_idx+batch_size]
 		batch_y = derain_data[batch_idx:batch_idx+batch_size]
 
+		print("Loaded images")
+
 		generated_images = generator.predict(batch_x)
+
+		print("Generator")
 		real_pairs = np.concatenate((batch_x, batch_y), axis=3)
 		fake_pairs = np.concatenate((batch_x, generated_images), axis=3)
+
+		print("Pairs made")
 
 		x = np.concatenate((real_pairs, fake_pairs))
 		y = np.concatenate((np.ones((batch_size, 32, 32, 1)),np.zeros((batch_size, 32, 32, 1))))
 		d_loss = discriminator.train_on_batch(x, y)
 
+		print("Concatenations done")
 		discriminator.trainable = False
 		d_out = np.ones((batch_size, 32, 32, 1))
 		g_loss = discriminator_on_generator.train_on_batch(batch_x, [batch_y,d_out])

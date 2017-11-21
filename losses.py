@@ -1,17 +1,25 @@
 import tensorflow as tf
 from keras import backend as K
+from keras.applications.vgg16 import VGG16
+from keras.models import Model
+
 
 from model import *
 
 lambda1 = 6.6e-3
 lambda2 = 1
 
-def perc_loss(generated_image, actual_image, modelD):
-	layer = 8 # Depends from which layer we want features. This might be wrong
-	layer_output = K.function([modelD.layers[0].input],[modelD.layers[layer].output])
+def constant_loss(y_true,y_pred):
+	return K.constant(1)
 
-	generated_features = layer_output([generated_image])[0]
-	actual_features = layer_output([actual_image])[0]
+def perc_loss(generated_image, actual_image):
+	base_model = VGG16(weights='imagenet', include_top=False)
+
+	model = Model(inputs=base_model.input, outputs=base_model.get_layer('block2_conv2').output)
+	# generated_features = layer_output([generated_image])[0]
+	# actual_features = layer_output([actual_image])[0]
+	generated_features = model.predict(generated_image)
+	actual_features = model.predict(actual_image)
 
 	# loss = K.mean(K.square(K.flatten(generated_features) - K.flatten(actual_features)), axis=-1)
 	return loss
