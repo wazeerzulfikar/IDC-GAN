@@ -114,6 +114,7 @@ def generator_containing_discriminator(generator, discriminator):
 
     vgg_model = Model(inputs=base_model.input, outputs=base_model.get_layer('block2_conv2').output)
     vgg_model.trainable = False
+
     vgg_model_out = vgg_model(concatenated)
     
     model = Model(inputs=inputs, outputs=[x_generator,x_discriminator,vgg_model_out])

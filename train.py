@@ -69,15 +69,24 @@ for i in range(n_epoch):
 		batch_x = rain_data[batch_idx:batch_idx+batch_size]
 		batch_y = derain_data[batch_idx:batch_idx+batch_size]
 
+		print("Loaded images")
+
 		generated_images = generator.predict(batch_x)
 
 		real_pairs = np.concatenate((batch_x, batch_y), axis=3)
 		fake_pairs = np.concatenate((batch_x, generated_images), axis=3)
 
+		print("Pairs made")
+
 		x = np.concatenate((real_pairs, fake_pairs))
 		y = np.concatenate((np.ones((batch_size, 32, 32, 1)),np.zeros((batch_size, 32, 32, 1))))
 		d_loss = discriminator.train_on_batch(x, y)
 
+		# perc_loss = perceptual_loss(batch_y, generated_images)
+
+		# print(perc_loss)
+
+		print("Concatenations done")
 		discriminator.trainable = False
 		rand = np.ones((batch_size, 32, 32, 1))
 		g_loss = discriminator_on_generator.train_on_batch(batch_x, [batch_y,rand,rand])
