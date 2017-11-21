@@ -46,14 +46,14 @@ generator = create_generator(3, 3, ngf, img_shape)
 print(generator.summary())
 discriminator = create_discriminator(3, 3, ndf, 3, img_shape)
 print(discriminator.summary())
-discriminator_on_generator, x_generator, x_discriminator = generator_containing_discriminator(generator, discriminator, img_shape)
+discriminator_on_generator, x_generator, x_discriminator, vgg_model_out = generator_containing_discriminator(generator, discriminator, img_shape)
 
-g_optim = Adam(lr=0.0001,beta_1=0.5)
-d_optim = Adam(lr=0.0001,beta_1=0.5)
+g_optim = Adam(lr=0.002,beta_1=0.5)
+d_optim = Adam(lr=0.002,beta_1=0.5)
 
 discriminator.compile(d_optim, loss=discriminator_loss)
 generator.compile(g_optim, loss='mse')
-discriminator_on_generator.compile(g_optim, loss = [refined_loss(d_out=x_discriminator),perc_loss])
+discriminator_on_generator.compile(g_optim, loss = [refined_loss(d_out=x_discriminator,vgg_out=vgg_model_out),constant_loss,constant_loss])
 
 for i in range(n_epoch):
 	print("Epoch : %d"%i)
@@ -75,10 +75,14 @@ for i in range(n_epoch):
 		y = np.concatenate((np.ones((batch_size, 32, 32, 1)),np.zeros((batch_size, 32, 32, 1))))
 		d_loss = discriminator.train_on_batch(x, y)
 
+		# perc_loss = perceptual_loss(batch_y, generated_images)
+
+		# print(perc_loss)
+
 		print("Concatenations done")
 		discriminator.trainable = False
-		d_out = np.ones((batch_size, 32, 32, 1))
-		g_loss = discriminator_on_generator.train_on_batch(batch_x, [batch_y,d_out])
+		rand = np.ones((batch_size, 32, 32, 1))
+		g_loss = discriminator_on_generator.train_on_batch(batch_x, [batch_y,rand,rand])
 		
 		discriminator.trainable = True
 

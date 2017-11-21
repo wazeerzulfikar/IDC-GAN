@@ -9,6 +9,8 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 import tensorflow as tf
 
+from keras.applications.vgg16 import VGG16
+
 
 _Conv2D = partial(Conv2D, padding="same")
 _Conv2DTranspose = partial(Conv2DTranspose, padding="same")
@@ -106,10 +108,16 @@ def generator_containing_discriminator(generator, discriminator, img_shape):
     merged = Concatenate(axis=3)([inputs, x_generator])
     discriminator.trainable = False
     x_discriminator = discriminator(merged)
+
+    concatenated = Concatenate(axis=0)([inputs, x_generator])
+    base_model = VGG16(weights='imagenet', include_top=False)
+
+    vgg_model = Model(inputs=base_model.input, outputs=base_model.get_layer('block2_conv2').output)
+    vgg_model_out = vgg_model(concatenated)
     
-    model = Model(inputs=inputs, outputs=[x_generator,x_discriminator])
+    model = Model(inputs=inputs, outputs=[x_generator,x_discriminator,vgg_model_out])
     
-    return model, x_generator, x_discriminator
+    return model, x_generator, x_discriminator, vgg_model_out
 
 if __name__ == '__main__':
 	print("HEY")
