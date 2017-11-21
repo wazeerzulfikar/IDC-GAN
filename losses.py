@@ -1,19 +1,18 @@
-import tensorflow as tf
 from keras import backend as K
+import tensorflow as tf
+import numpy as np
 
 from model import *
 
 lambda1 = 6.6e-3
 lambda2 = 1
 
-def perc_loss(generated_image, actual_image, modelD):
-	layer = 8 # Depends from which layer we want features. This might be wrong
-	layer_output = K.function([modelD.layers[0].input],[modelD.layers[layer].output])
+def constant_loss(y_true,y_pred):
+	return K.constant(1)
 
-	generated_features = layer_output([generated_image])[0]
-	actual_features = layer_output([actual_image])[0]
-
-	# loss = K.mean(K.square(K.flatten(generated_features) - K.flatten(actual_features)), axis=-1)
+def perceptual_loss(vgg_out):
+	actual_features, generated_features = tf.split(vgg_out,2)
+	loss = K.mean(K.square(K.flatten(generated_features) - K.flatten(actual_features)), axis=-1)
 	return loss
 
 def entropy_loss(d_out):
@@ -30,7 +29,7 @@ def refined_perceptual_loss(y_true, y_pred):
 	return discriminator_loss(y_true, y_pred)+lambda1*perceptual_loss(y_true,y_pred)+lambda2*generator_l2_loss(y_true, y_pred)
 
 
-def refined_loss(d_out):
+def refined_loss(d_out,vgg_out):
 	def loss(y_true, y_pred):
-		return lambda1*entropy_loss(d_out)+ generator_l2_loss(y_true, y_pred)
+		return lambda1*entropy_loss(d_out)+ generator_l2_loss(y_true, y_pred) + lambda2*perceptual_loss(vgg_out)
 	return loss

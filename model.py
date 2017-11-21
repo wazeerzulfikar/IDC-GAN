@@ -9,6 +9,8 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 import tensorflow as tf
 
+from keras.applications.vgg16 import VGG16
+
 
 _Conv2D = partial(Conv2D, padding="same")
 _Conv2DTranspose = partial(Conv2DTranspose, padding="same")
@@ -34,9 +36,9 @@ def R_DeConv_BN(*args, **kwargs):
 		)
 
 
-def create_generator(input_nc, output_nc, ngf, img_shape):
+def create_generator(input_nc, output_nc, ngf):
 
-	inputs = Input(shape=(img_shape))
+	inputs = Input(shape=(None,None,3))
 
 	#Encoder
 
@@ -78,10 +80,10 @@ def create_generator(input_nc, output_nc, ngf, img_shape):
 	return model
 
 
-def create_discriminator(input_nc, output_nc, ndf, n_layers, img_shape):
+def create_discriminator(input_nc, output_nc, ndf, n_layers):
 	model = Sequential()
 
-	model.add(_Conv2D(ndf, (4,4), strides=2, input_shape=(img_shape[0],img_shape[1],input_nc+output_nc)))
+	model.add(_Conv2D(ndf, (4,4), strides=2, input_shape=(None,None,input_nc+output_nc)))
 	model.add(LeakyReLU(0.2))
 
 	for i in range(1,n_layers-1):
@@ -99,20 +101,24 @@ def create_discriminator(input_nc, output_nc, ndf, n_layers, img_shape):
 	return model
 
 
-def generator_containing_discriminator(generator, discriminator, img_shape):
-    inputs = Input(img_shape)
+def generator_containing_discriminator(generator, discriminator):
+    inputs = Input(None,None,3)
     x_generator = generator(inputs)
     
     merged = Concatenate(axis=3)([inputs, x_generator])
     discriminator.trainable = False
     x_discriminator = discriminator(merged)
+
+    concatenated = Concatenate(axis=0)([inputs, x_generator])
+    base_model = VGG16(weights='imagenet', include_top=False)
+
+    vgg_model = Model(inputs=base_model.input, outputs=base_model.get_layer('block2_conv2').output)
+    vgg_model.trainable = False
+    vgg_model_out = vgg_model(concatenated)
     
-    model = Model(inputs=inputs, outputs=[x_generator,x_discriminator])
+    model = Model(inputs=inputs, outputs=[x_generator,x_discriminator,vgg_model_out])
     
-    return model, x_generator, x_discriminator
+    return model, x_generator, x_discriminator, vgg_model_out
 
 if __name__ == '__main__':
 	print("HEY")
-
-
-
