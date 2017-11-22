@@ -7,47 +7,45 @@ from keras.optimizers import Adam
 from keras.models import model_from_json
 import keras.backend as K
 
+import scipy.misc as misc
+
 from model import *
 from losses import *
 
-rain_data_path = "/dataset/rain_modified"
-derain_data_path = "/dataset/derain_modified"
+rain_data_path = "/dataset/rain_images.npy"
+derain_data_path = "/dataset/derain_images.npy"
 
 n_epoch = 100
 save_step = 10
-disp_step = 10
+disp_step = 1
 ngf = 64
 ndf = 48
 batch_size = 7
 img_shape = (256,256,3)
 
-def log10(x):
-  numerator = K.log(x)
-  denominator = K.log(K.constant(10, dtype=numerator.dtype))
-  return numerator / denominator
-
-def load_images(folder):
-	check = 1
-
-	images = []
-	for filename in os.listdir(folder):
-		if filename.endswith(".jpg"):
-			img = Image.open(os.path.join(folder, filename))
-			img = img.resize((256,256))
-			img = normalize(np.asarray(img))
-			images.append(img)
-	return np.array(images)
-
+def load_images(filename):
+	return np.load(filename)
 
 def normalize(img):
 	return (img/127.5) - 1
 
+def denormalize(img):
+	return (img+1)*127.5
 
-rain_data = load_images(rain_data_path)
+def calcPSNR(derain_images, generated_images):
+
+	derain_images = denormalize(derain_images)
+	generated_images = denormalize(generated_images)
+
+	mse = ((derain_images - generated_images) ** 2).mean(axis=None)
+	psnr = 20*np.log10(255/(mse**(1/2.0)))
+
+	print("Peak Signal to Noise Ratio:", psnr)
+
+rain_data = normalize(load_images(rain_data_path))
 print("Rain Data Loaded.")
-derain_data = load_images(derain_data_path)
+derain_data = normalize(load_images(derain_data_path))
 print("DeRain Data Loaded.")
-
 
 generator = create_generator(3, 3, ngf)
 print(generator.summary())
@@ -94,9 +92,6 @@ for i in range(n_epoch):
 		y = np.concatenate((np.ones((batch_size, 32, 32, 1)),np.zeros((batch_size, 32, 32, 1))))
 		d_loss = discriminator.train_on_batch(x, y)
 
-		# perc_loss = perceptual_loss(batch_y, generated_images)
-
-		# print(perc_loss)
 		discriminator.trainable = False
 		rand = np.ones((batch_size, 32, 32, 1))
 		g_loss = discriminator_on_generator.train_on_batch(batch_x, [batch_y,rand,rand])
@@ -113,21 +108,14 @@ for i in range(n_epoch):
 		discriminator_on_generator.save_weights(os.path.join("/output","discriminator_on_generator_%d.h5"%i))
 
 	if i%disp_step == 0:
-		predict_batch =  rain_data[:20]
+		predict_batch =  rain_data[:100]
+		true_batch = derain_data[:100]
 		generated_images = generator.predict(predict_batch)
+		calcPSNR(true_batch, generated_images)
 		
-		#Calculating PSNR
-		#calcPSNR(batch_y, generated_images)
-
-		for k,img in enumerate(generated_images):
-			img +=1
-			img*=127.5
-			img = Image.fromarray(img.astype(np.uint8))
-			img.save(os.path.join('/output',"epoch_%d_%d.jpg"%(i,k)))
-
-
-def calcPSNR(batch_y, generated_images):
-	mse = generator_l2_loss(batch_y, generated_images)
-	psnr = 20*log10(255/(mse**(1/2.0)))
-
-	print("Peak Signal to Noise Ratio:", psnr)
+		if i %save_step == 0:
+			for k,img in enumerate(generated_images[:10]):
+				img +=1
+				img*=127.5
+				img = Image.fromarray(img.astype(np.uint8))
+				img.save(os.path.join('/output',"epoch_%d_%d.jpg"%(i,k)))
