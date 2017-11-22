@@ -21,6 +21,11 @@ ndf = 48
 batch_size = 7
 img_shape = (256,256,3)
 
+def log10(x):
+  numerator = K.log(x)
+  denominator = K.log(K.constant(10, dtype=numerator.dtype))
+  return numerator / denominator
+
 def load_images(folder):
 	check = 1
 
@@ -110,8 +115,19 @@ for i in range(n_epoch):
 	if i%disp_step == 0:
 		predict_batch =  rain_data[:20]
 		generated_images = generator.predict(predict_batch)
+		
+		#Calculating PSNR
+		#calcPSNR(batch_y, generated_images)
+
 		for k,img in enumerate(generated_images):
 			img +=1
 			img*=127.5
 			img = Image.fromarray(img.astype(np.uint8))
 			img.save(os.path.join('/output',"epoch_%d_%d.jpg"%(i,k)))
+
+
+def calcPSNR(batch_y, generated_images):
+	mse = generator_l2_loss(batch_y, generated_images)
+	psnr = 20*log10(255/(mse**(1/2.0)))
+
+	print("Peak Signal to Noise Ratio:", psnr)
