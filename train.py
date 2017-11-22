@@ -21,6 +21,11 @@ ndf = 48
 batch_size = 7
 img_shape = (256,256,3)
 
+def log10(x):
+  numerator = K.log(x)
+  denominator = K.log(K.constant(10, dtype=numerator.dtype))
+  return numerator / denominator
+
 def load_images(folder):
 	check = 1
 
@@ -102,6 +107,14 @@ for i in range(n_epoch):
 		print("Discriminator Loss : ",d_loss)
 		print("Generator Loss : ",g_loss)
 		generated_images = generator.predict(batch_x)
+
+		#Calculating PSNR
+		mse = generator_l2_loss(batch_y, generated_images)
+		psnr = 20*log10(255/(mse**(1/2.0)))
+
+		print("Peak Signal to Noise Ratio:", psnr)
+
+
 		for k,img in enumerate(generated_images):
 			img +=1
 			img*=127.5
