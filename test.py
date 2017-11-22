@@ -1,5 +1,3 @@
-from keras.models import Sequential
-from keras.layers import Dense
 from keras.models import model_from_json
 import tensorflow as tf
 
@@ -21,8 +19,8 @@ generator = model_from_json(loaded_model_json)
 generator.load_weights("saved/generator_90.h5")
 print("Loaded model from disk")
 
-rain_data_path = "dataset/rain_modified"
-derain_data_path = "dataset/derain_modified"
+rain_data_path = "/dataset/rain_modified"
+derain_data_path = "/dataset/derain_modified"
 
 def load_images(folder):
 	check = 0
@@ -43,28 +41,23 @@ def normalize(img):
 def denormalize(img):
 	return (img+1) * 127.5
 
-
 rain_data = load_images(rain_data_path)
 print("Rain Data Loaded.")
 derain_data = load_images(derain_data_path)
 print("DeRain Data Loaded.")
 
-input_images = rain_data[0:20]
-derain_images = derain_data[0:20]
+input_images = rain_data
+derain_images = derain_data
 
 generated_images = generator.predict(input_images)
 
-
-input_images = denormalize(input_images)
+# input_images = denormalize(input_images)
 
 derain_images = denormalize(derain_images)
 
 generated_images = denormalize(generated_images)
 
-
-
 mse = ((derain_images - generated_images) ** 2).mean(axis=None)
 psnr = 20*np.log10(255/(mse**(1/2.0)))
-
 
 print("Peak Signal to Noise Ratio for 0:", psnr)
