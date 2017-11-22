@@ -14,7 +14,7 @@ rain_data_path = "/dataset/rain_modified"
 derain_data_path = "/dataset/derain_modified"
 
 n_epoch = 100
-save_step = 20
+save_step = 10
 disp_step = 10
 ngf = 64
 ndf = 48
@@ -28,6 +28,7 @@ def load_images(folder):
 	for filename in os.listdir(folder):
 		if filename.endswith(".jpg"):
 			img = Image.open(os.path.join(folder, filename))
+			img = img.resize((256,256))
 			img = normalize(np.asarray(img))
 			images.append(img)
 	return np.array(images)
@@ -47,6 +48,10 @@ generator = create_generator(3, 3, ngf)
 print(generator.summary())
 discriminator = create_discriminator(3, 3, ndf, 3)
 print(discriminator.summary())
+
+#generator.load_weights(os.path.join("/saved","generator_60.h5"))
+#discriminator.load_weights(os.path.join("/saved","discriminator_60.h5"))
+
 discriminator_on_generator, x_generator, x_discriminator, vgg_model_out = generator_containing_discriminator(generator, discriminator)
 
 g_optim = Adam(lr=0.002,beta_1=0.5)
@@ -57,26 +62,28 @@ generator.compile(g_optim, loss='mse')
 discriminator_on_generator.compile(g_optim, loss = [refined_loss(d_out=x_discriminator,vgg_out=vgg_model_out),constant_loss,constant_loss])
 
 generator_json = generator.to_json()
-with open("generator.json", "w") as json_file:
+with open(os.path.join("/output","generator.json"), "w") as json_file:
     json_file.write(generator_json)
 
 discriminator_json = discriminator.to_json()
-with open("discriminator.json", "w") as json_file:
+with open(os.path.join("/output","discriminator.json"), "w") as json_file:
     json_file.write(discriminator_json)
+
+discriminator_on_generator_json = discriminator_on_generator.to_json()
+with open(os.path.join("/output","discriminator_on_generator.json"), "w") as json_file:
+    json_file.write(discriminator_on_generator_json)
 
 for i in range(n_epoch):
 	for batch_idx in range(0, len(rain_data), batch_size):
 		batch_x = rain_data[batch_idx:batch_idx+batch_size]
 		batch_y = derain_data[batch_idx:batch_idx+batch_size]
 
-		print("Loaded images")
-
 		generated_images = generator.predict(batch_x)
 
 		real_pairs = np.concatenate((batch_x, batch_y), axis=3)
 		fake_pairs = np.concatenate((batch_x, generated_images), axis=3)
 
-		print("Pairs made")
+		discriminator.trainable = True
 
 		x = np.concatenate((real_pairs, fake_pairs))
 		y = np.concatenate((np.ones((batch_size, 32, 32, 1)),np.zeros((batch_size, 32, 32, 1))))
@@ -85,23 +92,24 @@ for i in range(n_epoch):
 		# perc_loss = perceptual_loss(batch_y, generated_images)
 
 		# print(perc_loss)
-
-		print("Concatenations done")
 		discriminator.trainable = False
 		rand = np.ones((batch_size, 32, 32, 1))
 		g_loss = discriminator_on_generator.train_on_batch(batch_x, [batch_y,rand,rand])
 		
 		discriminator.trainable = True
 
+	print("Epoch : %d"%i)
+	print("Discriminator Loss : ",d_loss)
+	print("Generator Loss : ",g_loss)
+
 	if i%save_step == 0:
 		discriminator.save_weights(os.path.join("/output","discriminator_%d.h5"%i))
 		generator.save_weights(os.path.join("/output","generator_%d.h5"%i))
+		discriminator_on_generator.save_weights(os.path.join("/output","discriminator_on_generator_%d.h5"%i))
 
 	if i%disp_step == 0:
-		print("Epoch : %d"%i)
-		print("Discriminator Loss : ",d_loss)
-		print("Generator Loss : ",g_loss)
-		generated_images = generator.predict(batch_x)
+		predict_batch =  rain_data[:20]
+		generated_images = generator.predict(predict_batch)
 		for k,img in enumerate(generated_images):
 			img +=1
 			img*=127.5

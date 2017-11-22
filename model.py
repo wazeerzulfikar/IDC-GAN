@@ -38,7 +38,7 @@ def R_DeConv_BN(*args, **kwargs):
 
 def create_generator(input_nc, output_nc, ngf):
 
-	inputs = Input(shape=(None,None,3))
+	inputs = Input(shape=(256,256,3))
 
 	#Encoder
 
@@ -83,7 +83,7 @@ def create_generator(input_nc, output_nc, ngf):
 def create_discriminator(input_nc, output_nc, ndf, n_layers):
 	model = Sequential()
 
-	model.add(_Conv2D(ndf, (4,4), strides=2, input_shape=(None,None,input_nc+output_nc)))
+	model.add(_Conv2D(ndf, (4,4), strides=2, input_shape=(256,256,input_nc+output_nc)))
 	model.add(LeakyReLU(0.2))
 
 	for i in range(1,n_layers-1):
@@ -102,7 +102,7 @@ def create_discriminator(input_nc, output_nc, ndf, n_layers):
 
 
 def generator_containing_discriminator(generator, discriminator):
-    inputs = Input(None,None,3)
+    inputs = Input(shape=(256,256,3))
     x_generator = generator(inputs)
     
     merged = Concatenate(axis=3)([inputs, x_generator])
