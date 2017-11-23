@@ -52,8 +52,8 @@ print(generator.summary())
 discriminator = create_discriminator(3, 3, ndf, 3)
 print(discriminator.summary())
 
-#generator.load_weights(os.path.join("/saved","generator_60.h5"))
-#discriminator.load_weights(os.path.join("/saved","discriminator_60.h5"))
+generator.load_weights(os.path.join("/saved","generator_90.h5"))
+discriminator.load_weights(os.path.join("/saved","discriminator_90.h5"))
 
 discriminator_on_generator, x_generator, x_discriminator, vgg_model_out = generator_containing_discriminator(generator, discriminator)
 
@@ -76,7 +76,7 @@ discriminator_on_generator_json = discriminator_on_generator.to_json()
 with open(os.path.join("/output","discriminator_on_generator.json"), "w") as json_file:
     json_file.write(discriminator_on_generator_json)
 
-for i in range(n_epoch):
+for i in range(n_epoch+1):
 	for batch_idx in range(0, len(rain_data), batch_size):
 		batch_x = rain_data[batch_idx:batch_idx+batch_size]
 		batch_y = derain_data[batch_idx:batch_idx+batch_size]
