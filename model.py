@@ -9,7 +9,7 @@ from keras.layers.advanced_activations import LeakyReLU
 from keras.layers.normalization import BatchNormalization
 import tensorflow as tf
 
-from keras.applications.vgg16 import VGG16
+#from keras.applications.vgg16 import VGG16
 
 
 _Conv2D = partial(Conv2D, padding="same")

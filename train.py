@@ -15,7 +15,7 @@ from losses import *
 rain_data_path = "/dataset/rain_images.npy"
 derain_data_path = "/dataset/derain_images.npy"
 
-n_epoch = 100
+n_epoch = 200
 save_step = 10
 disp_step = 1
 ngf = 64
