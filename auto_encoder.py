@@ -22,8 +22,8 @@ def load_images(filename):
 	return np.load(filename)
 
 
-rain_data_path = "/dataset/rain_images.npy"
-derain_data_path = "/dataset/derain_images.npy"
+rain_data_path = "../dataset/rain_images.npy"
+derain_data_path = "../dataset/derain_images.npy"
 
 rain_data = normalize(load_images(rain_data_path))
 print("Rain Data Loaded.")
@@ -54,7 +54,7 @@ def create_model():
 
 	return model
 
-def calcPSNR(y_true, y_pred):
+def psnr(y_true, y_pred):
 
 	derain_images = denormalize(y_true)
 	generated_images = denormalize(y_pred)
@@ -62,28 +62,32 @@ def calcPSNR(y_true, y_pred):
 	mse = ((derain_images - generated_images) ** 2).mean(axis=None)
 	psnr = 20*np.log10(255/(mse**(1/2.0)))
 
+	print("PSNR is "+str(psnr))
 	return psnr
 
-model = create_model()
+#model = create_model()
 
-model.load_model("auto-encoder")
+model = load_model("auto-encoder")
 
 #Compile and train
-model.compile(optimizer='adam', loss='mse',metrics = [psnr])
-model.fit(rain_images,derain_images,epochs=20,batch_size=35)
+#model.compile(optimizer='adam', loss='mse',metrics = ['accuracy'])
+#model.fit(rain_data,derain_data,epochs=20,batch_size=35)
 
 #save model
-model.save("/output/model")
+#model.save("/output/model")
 
 #write to json
-generator_json = model.to_json()
-with open("/output/modelJson.json", "w") as json_file:
-    json_file.write(generator_json)
+# generator_json = model.to_json()
+# with open("/output/modelJson.json", "w") as json_file:
+#     json_file.write(generator_json)
 
-model.save_weights("/output/auto-encoder.h5")
+#model.save_weights("/output/auto-encoder.h5")
 
+print(model.evaluate(rain_data[:50],derain_data[:50]))
 
+generated_images = model.predict(rain_data[:50])
 
+psnr(derain_data[:50], generated_images)
 
 
 
